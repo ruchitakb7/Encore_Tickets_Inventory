@@ -6,7 +6,11 @@
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "dev": "tsx watch src/server.ts"
+    "dev": "tsx watch src/server.ts",
+    "start": "nodemon --exec tsx src/server.ts",
+     "db:generate": "drizzle-kit generate",
+    "db:migrate": "drizzle-kit migrate",
+    "build":"tsc"
   },
   "keywords": [],
   "author": "",
