@@ -1,7 +1,7 @@
 import { type Request, type Response } from "express";
 import { and, eq, gt, sql } from "drizzle-orm";
-import {db} from "../config/db.js"
-import {events} from "../models/event.js"
+import { db } from "../config/db.js"
+import { events } from "../models/event.js"
 import { holds } from "../models/holds.js";
 import { orders } from "../models/orders.js";
 import { webhookEvents } from "../models/webhookevent.js";
@@ -67,6 +67,11 @@ export const getEvent = async (
 ) => {
   try {
     const { event_id } = req.params;
+    if (!event_id || Array.isArray(event_id)) {
+      return res.status(400).json({
+        error: "Invalid event_id",
+      });
+    }
 
     const event = await db
       .select()
@@ -151,6 +156,8 @@ export const createHold = async (
 ) => {
   try {
     const { event_id } = req.params;
+
+
     const { tier_id, quantity } = req.body;
 
     // Basic validation
@@ -162,7 +169,7 @@ export const createHold = async (
 
     const result = await db.transaction(async (tx) => {
 
-     
+
       const tierResult = await tx.execute(sql`
         SELECT *
         FROM tiers
@@ -180,7 +187,7 @@ export const createHold = async (
         total_inventory: number;
       };
 
-    
+
       const activeHoldResult = await tx
         .select({
           total: sql<number>`
@@ -200,7 +207,7 @@ export const createHold = async (
         activeHoldResult[0]?.total ?? 0
       );
 
-     
+
       const paidOrderResult = await tx
         .select({
           total: sql<number>`
@@ -219,7 +226,7 @@ export const createHold = async (
         paidOrderResult[0]?.total ?? 0
       );
 
-    
+
       const availableInventory =
         tier.total_inventory -
         activeHoldQuantity -
@@ -229,14 +236,14 @@ export const createHold = async (
         throw new Error("INSUFFICIENT_INVENTORY");
       }
 
-  
+
       const expiresAt = new Date(
         Date.now() + 10 * 60 * 1000
       );
 
       const holdId = `hold_${randomUUID()}`;
 
-   
+
       const [newHold] = await tx
         .insert(holds)
         .values({
@@ -250,6 +257,14 @@ export const createHold = async (
 
       return newHold;
     });
+
+    if (!result) {
+      return res.status(404).json({
+        success: false,
+        message: "result might be empty",
+      });
+    }
+
 
     return res.status(201).json({
       hold_id: result.id,

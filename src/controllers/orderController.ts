@@ -1,4 +1,4 @@
-import {type Request, type Response } from "express";
+import { type Request, type Response } from "express";
 import { and, eq } from "drizzle-orm";
 import { db } from "../config/db.js"
 import { holds } from "../models/holds.js";
@@ -10,6 +10,12 @@ export const cancelHold = async (
 ) => {
   try {
     const { hold_id } = req.params;
+
+    if (!hold_id || Array.isArray(hold_id)) {
+      return res.status(400).json({
+        error: "Invalid hold_id",
+      });
+    }
 
     const [hold] = await db
       .select()
@@ -36,6 +42,14 @@ export const cancelHold = async (
       })
       .where(eq(holds.id, hold_id))
       .returning();
+
+    if (!updatedHold) {
+      return res.status(404).json({
+        success: false,
+        message: "Hold could not be updated",
+      });
+    }
+
 
     return res.status(200).json({
       message: "Hold cancelled successfully",

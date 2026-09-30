@@ -24,7 +24,7 @@ export const handlePaymentWebhook = async (
       currency,
     } = req.body;
 
-   
+
     if (
       typeof event_id !== "string" ||
       typeof type !== "string" ||
@@ -44,7 +44,7 @@ export const handlePaymentWebhook = async (
       });
     }
 
-  
+
 
     const existingWebhook = await db
       .select({
@@ -62,10 +62,10 @@ export const handlePaymentWebhook = async (
       });
     }
 
-  
+
 
     if (type === "order.refunded") {
- 
+
       if (
         !Number.isInteger(amount_refunded) ||
         amount_refunded < 0
@@ -82,7 +82,7 @@ export const handlePaymentWebhook = async (
         .where(eq(orders.id, order_id))
         .limit(1);
 
-    
+
       if (!existingOrder) {
         return res.status(404).json({
           success: false,
@@ -98,7 +98,7 @@ export const handlePaymentWebhook = async (
         });
       }
 
-  
+
       const result = await db.transaction(async (tx) => {
         const [updatedOrder] = await tx
           .update(orders)
@@ -132,7 +132,7 @@ export const handlePaymentWebhook = async (
       });
     }
 
-  
+
     if (
       typeof hold_id !== "string" ||
       typeof tier_id !== "string" ||
@@ -148,7 +148,7 @@ export const handlePaymentWebhook = async (
     }
 
     const result = await db.transaction(async (tx) => {
-  
+
       const [hold] = await tx
         .select()
         .from(holds)
@@ -164,7 +164,7 @@ export const handlePaymentWebhook = async (
         throw new Error("HOLD_NOT_FOUND");
       }
 
-  
+
       if (hold.status !== "active") {
         throw new Error("HOLD_NOT_ACTIVE");
       }
@@ -173,7 +173,7 @@ export const handlePaymentWebhook = async (
         throw new Error("QUANTITY_MISMATCH");
       }
 
-  
+
       if (hold.expiresAt <= new Date()) {
         throw new Error("HOLD_EXPIRED");
       }
@@ -185,7 +185,7 @@ export const handlePaymentWebhook = async (
         processedAt: new Date(),
       });
 
-     
+
       const [order] = await tx
         .insert(orders)
         .values({
@@ -195,6 +195,11 @@ export const handlePaymentWebhook = async (
           status: "paid",
         })
         .returning();
+
+      if (!order) {
+        throw new Error("ORDER_CREATION_FAILED");
+      }
+
 
       const [updatedHold] = await tx
         .update(holds)
@@ -218,6 +223,8 @@ export const handlePaymentWebhook = async (
         hold: updatedHold,
       };
     });
+
+
 
     return res.status(200).json({
       success: true,
